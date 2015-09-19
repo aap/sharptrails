@@ -75,6 +75,28 @@ int dontblur = 1;
 void
 CMBlur::OverlayRenderVC_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, int type)
 {
+	if(0 && type == 1){
+		color.red = 180;
+		color.green = 255;
+		color.blue = 180;
+		color.alpha = 120;
+
+		DefinedState();
+		RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)1);
+		RwRenderStateSet(rwRENDERSTATEFOGENABLE, 0);
+		RwRenderStateSet(rwRENDERSTATEZTESTENABLE, 0);
+		RwRenderStateSet(rwRENDERSTATEZWRITEENABLE, 0);
+		RwRenderStateSet(rwRENDERSTATETEXTURERASTER, raster);
+		RwRenderStateSet(rwRENDERSTATEVERTEXALPHAENABLE, (void*)1);
+		RwRenderStateSet(rwRENDERSTATESRCBLEND, (void*)rwBLENDSRCALPHA);
+		RwRenderStateSet(rwRENDERSTATEDESTBLEND, (void*)rwBLENDINVSRCALPHA);
+		RwUInt32 emissiveColor = D3DCOLOR_ARGB(color.alpha, color.red, color.green, color.blue);
+		for(int i = 0; i < 4; i++)
+			blurVertices[i].emissiveColor = emissiveColor;
+		RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, blurVertices, 4, blurIndices, 6);
+		return;
+	}
+
 	if(type != 2 || !CMBlur::BlurOn || !dontblur || !RwD3D9Supported()){
 		CMBlur::OverlayRenderVC(cam, raster, color, type);
 		return;
@@ -97,6 +119,13 @@ CMBlur::OverlayRenderVC_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, in
 	setps();
 	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, blurVertices, 4, blurIndices, 6);
 	overridePS = NULL;
+
+	if(type != 1){
+		RwRasterPushContext(CMBlur::pFrontBuffer);
+		RwRasterRenderFast(cam->frameBuffer, 0, 0);
+		RwRasterPopContext();
+		CMBlur::OverlayRenderFx(cam, CMBlur::pFrontBuffer);
+	}
 }
 
 /*
