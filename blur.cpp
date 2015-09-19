@@ -5,7 +5,7 @@
 HMODULE dllModule;
 int gtaversion = -1;
 
-static uint32_t DefinedState_A = AddressByVersion<uint32_t>(0x526330, 0x526570, 0x57F9C0);
+static uint32_t DefinedState_A = AddressByVersion<uint32_t>(0x526330, 0x526570, 0x526500, 0x57F9C0, 0x57F9E0, 0x57F7F0);
 WRAPPER void DefinedState(void) { VARJMP(DefinedState_A); }
 
 void *overridePS = NULL;
@@ -26,13 +26,15 @@ public:
 };
 
 //bool &CMBlur::ms_bJustInitialised = *(bool*)0xA10B71;
-bool &CMBlur::BlurOn = *AddressByVersion<bool*>(0x95CDAD, 0x5FDB84, 0x697D54);
+bool &CMBlur::BlurOn = *AddressByVersion<bool*>(0x95CDAD, 0x5FDB84, 0x60AB7C, 0x697D54, 0x697D54, 0x696D5C);
 //float &CMBlur::Drunkness = *(float*)0x983B38;
-RwRaster *&CMBlur::pFrontBuffer = *AddressByVersion<RwRaster**>(0x8E2C48, 0x8E2CFC, 0x9753A4);
+RwRaster *&CMBlur::pFrontBuffer = *AddressByVersion<RwRaster**>(0x8E2C48, 0x8E2CFC, 0x8F2E3C, 0x9753A4, 0x9753AC, 0x9743AC);
 
-WRAPPER void CMBlur::OverlayRenderFx(RwCamera*, RwRaster*) { EAXJMP(0x55D870); }
-WRAPPER void CMBlur::OverlayRenderVC(RwCamera*, RwRaster*, RwRGBA, int) { EAXJMP(0x55E750); }
-static uint32_t OverlayRenderIII_A = AddressByVersion<uint32_t>(0x50A9C0, 0x50AAA0, 0);
+static uint32_t OverlayRenderFx_A = AddressByVersion<uint32_t>(0, 0, 0, 0x55D870, 0x55D890, 0x55D760);
+WRAPPER void CMBlur::OverlayRenderFx(RwCamera*, RwRaster*) { VARJMP(OverlayRenderFx_A); }
+static uint32_t OverlayRenderVC_A = AddressByVersion<uint32_t>(0, 0, 0, 0x55E750, 0x55E770, 0x55E640);
+WRAPPER void CMBlur::OverlayRenderVC(RwCamera*, RwRaster*, RwRGBA, int) { VARJMP(OverlayRenderVC_A); }
+static uint32_t OverlayRenderIII_A = AddressByVersion<uint32_t>(0x50A9C0, 0x50AAA0, 0x50AA30, 0, 0, 0);
 WRAPPER void CMBlur::OverlayRenderIII(RwCamera*, RwRaster*, RwRGBA, int, int) { VARJMP(OverlayRenderIII_A); }
 
 
@@ -53,9 +55,9 @@ CMBlur::MotionBlurRender(RwCamera *cam, RwUInt8 red, RwUInt8 green, RwUInt8 blue
 }
 */
 
-RwD3D8Vertex *blurVertices = AddressByVersion<RwD3D8Vertex*>(0x62F780, 0x62F780, 0x7097A8);
+RwD3D8Vertex *blurVertices = AddressByVersion<RwD3D8Vertex*>(0x62F780, 0x62F780, 0x63F780, 0x7097A8, 0x7097A8, 0x7087A8);
 //RwD3D8Vertex *blurVertices2 = (RwD3D8Vertex*)0x709818;
-RwImVertexIndex *blurIndices = AddressByVersion<RwImVertexIndex*>(0x5FDD90, 0x5FDB78, 0x697D48);
+RwImVertexIndex *blurIndices = AddressByVersion<RwImVertexIndex*>(0x5FDD90, 0x5FDB78, 0x60AB70, 0x697D48, 0x697D48, 0x696D50);
 
 void
 setps(void)
@@ -265,17 +267,22 @@ CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, i
 }
 
 void
-patch10(void)
+patch(void)
 {
 	if(isVC()){
-		MemoryVP::InjectHook(0x55D838, CMBlur::OverlayRenderVC_noblur);
-		MemoryVP::InjectHook(0x6666B8, RwD3D8SetPixelShader_hook);
-		MemoryVP::InjectHook(0x666928, RwD3D8SetPixelShader_hook);
+		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x55D838, 0x55D858, 0x55D728), CMBlur::OverlayRenderVC_noblur);
+		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x6666B8, 0x666708, 0x665668), RwD3D8SetPixelShader_hook);
+		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x666928, 0x666978, 0x6658D8), RwD3D8SetPixelShader_hook);
 	}else{
-		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x50ADDD, 0x50AEBD, 0), CMBlur::OverlayRenderIII_noblur);
-		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x5BF9D6, 0x5BFC96, 0), RwD3D8SetPixelShader_hook);
-		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x5BFBD3, 0x5BFE93, 0), RwD3D8SetPixelShader_hook);
-		MemoryVP::Nop(AddressByVersion<uint32_t>(0x50AE2F, 0x50AF0F, 0), 5);
+		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x50ADDD, 0x50AEBD, 0x50AE4D, 0, 0, 0), CMBlur::OverlayRenderIII_noblur);
+		if (gtaversion == III_STEAM)
+			MemoryVP::InjectHook(0x5C353A, RwD3D8SetPixelShader_hook);
+		else
+		{
+			MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x5BF9D6, 0x5BFC96, 0, 0, 0, 0), RwD3D8SetPixelShader_hook);
+			MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x5BFBD3, 0x5BFE93, 0, 0, 0, 0), RwD3D8SetPixelShader_hook);
+		}
+		MemoryVP::Nop(AddressByVersion<uint32_t>(0x50AE2F, 0x50AF0F, 0x50AE9F, 0, 0, 0), 5);
 	}
 }
 
@@ -290,9 +297,10 @@ DllMain(HINSTANCE hInst, DWORD reason, LPVOID)
 		freopen("CONOUT$", "w", stdout);
 		freopen("CONOUT$", "w", stderr);*/
 
-		AddressByVersion<uint32_t>(0, 0, 0);
-		if(gtaversion == III_10 || gtaversion == III_11 || gtaversion == VC_10)
-			patch10();
+		AddressByVersion<uint32_t>(0, 0, 0, 0, 0, 0);
+		//if(gtaversion == III_10 || gtaversion == III_11 || gtaversion == VC_10)
+		if(gtaversion != -1)
+			patch();
 	}
 
 	return TRUE;
