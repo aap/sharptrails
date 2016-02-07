@@ -8,7 +8,7 @@ int gtaversion = -1;
 static uint32_t DefinedState_A = AddressByVersion<uint32_t>(0x526330, 0x526570, 0x526500, 0x57F9C0, 0x57F9E0, 0x57F7F0);
 WRAPPER void DefinedState(void) { VARJMP(DefinedState_A); }
 
-void *overridePS = NULL;
+//void *overridePS = NULL;
 void *blurps = NULL;
 
 class CMBlur {
@@ -69,7 +69,7 @@ setps(void)
 		assert(blurps);
 		FreeResource(shader);
 	}
-	overridePS = blurps;
+	RwD3D9SetIm2DPixelShader(blurps);
 }
 
 int dontblur = 1;
@@ -120,7 +120,7 @@ CMBlur::OverlayRenderVC_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, in
 		blurVertices[i].emissiveColor = emissiveColor;
 	setps();
 	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, blurVertices, 4, blurIndices, 6);
-	overridePS = NULL;
+	RwD3D9SetIm2DPixelShader(NULL);
 
 	if(type != 1){
 		RwRasterPushContext(CMBlur::pFrontBuffer);
@@ -229,19 +229,19 @@ CMBlur::OverlayRender(RwCamera *cam, RwRaster *raster, RwRGBA color, int type)
 }
 */
 
-RwBool
-RwD3D8SetPixelShader_hook(RwUInt32 handle)
-{
-	if(overridePS){
-		RwD3D9SetPixelShader(overridePS);
-		return 1;
-	}
-	return RwD3D8SetPixelShader(handle);
-}
-
 void
 CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, int type, int alpha)
 {
+	//{
+	//	static bool keystate = false;
+	//	if(GetAsyncKeyState(VK_F4) & 0x8000){
+	//		if(!keystate){
+	//			dontblur = !dontblur;
+	//			keystate = true;
+	//		}
+	//	}else
+	//		keystate = false;
+	//}
 	if(!CMBlur::BlurOn || !dontblur || !RwD3D9Supported()){
 		CMBlur::OverlayRenderIII(cam, raster, color, type, alpha);
 		return;
@@ -250,6 +250,16 @@ CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, i
 	RwRasterPushContext(CMBlur::pFrontBuffer);
 	RwRasterRenderFast(cam->frameBuffer, 0, 0);
 	RwRasterPopContext();
+
+	//float mult[3], add[3];
+	//mult[0] = (color.red-64)/384.0f + 1.14f;
+	//mult[1] = (color.green-64)/384.0f + 1.14f;
+	//mult[2] = (color.blue-64)/384.0f + 1.14f;
+	//add[0] = color.red/1536.f;
+	//add[1] = color.green/1536.f;
+	//add[2] = color.blue/1536.f;
+	//RwD3D9SetPixelShaderConstant(3, &mult, 1);
+	//RwD3D9SetPixelShaderConstant(4, &add, 1);
 
 	DefinedState();
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)1);
@@ -263,25 +273,17 @@ CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, i
 		blurVertices[i].emissiveColor = emissiveColor;
 	setps();
 	RwIm2DRenderIndexedPrimitive(rwPRIMTYPETRILIST, blurVertices, 4, blurIndices, 6);
-	overridePS = NULL;
+	RwD3D9SetIm2DPixelShader(NULL);
 }
 
 void
 patch(void)
 {
-	if(isVC()){
+
+	if(isVC())
 		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x55D838, 0x55D858, 0x55D728), CMBlur::OverlayRenderVC_noblur);
-		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x6666B8, 0x666708, 0x665668), RwD3D8SetPixelShader_hook);
-		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x666928, 0x666978, 0x6658D8), RwD3D8SetPixelShader_hook);
-	}else{
+	else{
 		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x50ADDD, 0x50AEBD, 0x50AE4D, 0, 0, 0), CMBlur::OverlayRenderIII_noblur);
-		if (gtaversion == III_STEAM)
-			MemoryVP::InjectHook(0x5C353A, RwD3D8SetPixelShader_hook);
-		else
-		{
-			MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x5BF9D6, 0x5BFC96, 0, 0, 0, 0), RwD3D8SetPixelShader_hook);
-			MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x5BFBD3, 0x5BFE93, 0, 0, 0, 0), RwD3D8SetPixelShader_hook);
-		}
 		MemoryVP::Nop(AddressByVersion<uint32_t>(0x50AE2F, 0x50AF0F, 0x50AE9F, 0, 0, 0), 5);
 	}
 }

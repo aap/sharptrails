@@ -10,6 +10,14 @@ sampler2D tex0 : register(s0);
 float4
 main(PS_INPUT In) : COLOR
 {
+	//float4 color = tex2D(tex0, In.texcoord0.xy) * 0.25;
+	//float2 dist = float2(0.005, 0.005);
+	//color += tex2D(tex0, In.texcoord0.xy + dist) * 0.175;
+	//color += tex2D(tex0, In.texcoord0.xy - dist) * 0.175;
+	//color += tex2D(tex0, In.texcoord0.xy + float2(dist.x, -dist.y)) * 0.2;
+	//color += tex2D(tex0, In.texcoord0.xy + float2(-dist.x, dist.y)) * 0.2;
+	//return color;
+
 	float a = 30/255.0f;
 	float4 doublec = saturate(In.color*2);
 	float4 dst = tex2D(tex0, In.texcoord0.xy);

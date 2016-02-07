@@ -40,7 +40,7 @@
   <PropertyGroup Label="UserMacros" />
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
     <TargetExt>.asi</TargetExt>
-    <IncludePath>C:\Users\aap\Desktop\RWSDK\RW3.4\include\d3d8;C:\Users\aap\src\rwd3d9;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\aap\Desktop\RWSDK\RW34\include\d3d8;C:\Users\aap\src\rwd3d9;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\aap\src\rwd3d9\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
