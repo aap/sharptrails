@@ -303,6 +303,7 @@ DllMain(HINSTANCE hInst, DWORD reason, LPVOID)
 		//if(gtaversion == III_10 || gtaversion == III_11 || gtaversion == VC_10)
 		if(gtaversion != -1)
 			patch();
+		enableTrailSetting();
 	}
 
 	return TRUE;

@@ -45,7 +45,7 @@
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <TargetExt>.asi</TargetExt>
-    <IncludePath>C:\Users\aap\Desktop\RWSDK\RW3.4\include\d3d8;C:\Users\aap\src\rwd3d9;$(IncludePath)</IncludePath>
+    <IncludePath>C:\Users\aap\Desktop\RWSDK\RW34\include\d3d8;C:\Users\aap\src\rwd3d9;$(IncludePath)</IncludePath>
     <LibraryPath>C:\Users\aap\src\rwd3d9\Release;$(LibraryPath)</LibraryPath>
   </PropertyGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Debug|Win32'">
@@ -84,6 +84,7 @@
   <ItemGroup>
     <ClCompile Include="blur.cpp" />
     <ClCompile Include="rw.cpp" />
+    <ClCompile Include="silenttrails.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="resource.h" />

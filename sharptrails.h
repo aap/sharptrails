@@ -14,3 +14,5 @@
 #include "MemoryMgr.h"
 
 extern HMODULE dllModule;
+
+void enableTrailSetting(void);
