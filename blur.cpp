@@ -1,6 +1,6 @@
 #include "sharptrails.h"
-#include "d3d8.h"
-#include "d3d8types.h"
+#include "d3d9.h"
+#include "d3d9types.h"
 
 HMODULE dllModule;
 int gtaversion = -1;
@@ -299,11 +299,29 @@ DllMain(HINSTANCE hInst, DWORD reason, LPVOID)
 		freopen("CONOUT$", "w", stdout);
 		freopen("CONOUT$", "w", stderr);*/
 
-		AddressByVersion<uint32_t>(0, 0, 0, 0, 0, 0);
+		AddressByVersion<uint32_t>(0, 0, 0, 0, 0, 0);			
+
 		//if(gtaversion == III_10 || gtaversion == III_11 || gtaversion == VC_10)
-		if(gtaversion != -1)
-			patch();
-		enableTrailSetting();
+		if (gtaversion != -1)
+		{
+			if (isVC())
+			{
+				MemoryVP::InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x48FEAF, 0x48FEBF, 0x48FDBF), enableTrailSetting, PATCH_CALL);
+
+				//CMBlur::AddRenderFx Type 4
+				MemoryVP::Nop(AddressByVersion<uint32_t>(0, 0, 0, 0x560FF9, 0x561019, 0x560EE9), 5);
+				MemoryVP::Nop(AddressByVersion<uint32_t>(0, 0, 0, 0x561259, 0x561279, 0x561149), 5);
+
+				char			dllName[MAX_PATH];
+				GetModuleFileName(hInst, dllName, MAX_PATH);
+				char* tempPointer = strrchr(dllName, '\\');
+				if (strstr(tempPointer + 1, "sharp") != NULL) {
+					patch();
+				}
+			}
+			else
+				patch();
+		}
 	}
 
 	return TRUE;
