@@ -42,10 +42,10 @@ void LoadSetFile(unsigned char* pTrails)
 	FILE* hFile = fopen("gta_vc.set", "rb");
 	if ( hFile )
 	{
-		fseek(hFile, 0x5BA, SEEK_SET);
+		fseek(hFile, 0x5B8, SEEK_SET);
 		fread(pTrails, 1, 1, hFile);
-		if ( *pTrails == 's' )
-			*pTrails = 0;
+		if (*pTrails > 0)
+			*pTrails = 1;
 		fclose(hFile);
 	}
 }
@@ -58,7 +58,7 @@ enableTrailSetting(void)
 	if( *(DWORD*)0x667BF5 == 0xB85548EC ) // VC 1.0
 	{
 		int				pMenuEntries = *(int*)0x4966A0 + 0x3C8;
-		unsigned char*	pTrailsOptionEnabled = *(unsigned char**)0x48FEB0;
+		unsigned char*	pTrailsOptionEnabled = *(unsigned char**)0x498DEE;
 
 		Patch<const void*>(0x4902D2, pTrailsOptionEnabled);
 		memcpy((void*)pMenuEntries, displaySettingsPatch, sizeof(displaySettingsPatch));
@@ -70,7 +70,7 @@ enableTrailSetting(void)
 	else if ( *(DWORD*)0x667C45 == 0xB85548EC )	// VC 1.1
 	{
 		int				pMenuEntries = *(int*)0x4966B0 + 0x3C8;
-		unsigned char*	pTrailsOptionEnabled = *(unsigned char**)0x48FEC0;
+		unsigned char*	pTrailsOptionEnabled = *(unsigned char**)0x498DFE;
 
 		Patch<const void*>(0x4902E2, pTrailsOptionEnabled);
 		memcpy((void*)pMenuEntries, displaySettingsPatch, sizeof(displaySettingsPatch));
@@ -82,7 +82,7 @@ enableTrailSetting(void)
 	else if ( *(DWORD*)0x666BA5 == 0xB85548EC ) // VC Steam
 	{
 		int				pMenuEntries = *(int*)0x4965B0 + 0x3C8;
-		unsigned char*	pTrailsOptionEnabled = *(unsigned char**)0x48FDC0;
+		unsigned char*	pTrailsOptionEnabled = *(unsigned char**)0x498CFE;
 
 		Patch<const void*>(0x4901E2, pTrailsOptionEnabled);
 		memcpy((void*)pMenuEntries, displaySettingsPatch, sizeof(displaySettingsPatch));
