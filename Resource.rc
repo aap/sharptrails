@@ -1,5 +1,0 @@
-#include "resource.h"
-#include <windows.h>
-
-IDR_VCBLURPS RCDATA "Debug\\vcBlurPS.cso"
-IDR_IIIBLURPS RCDATA "Debug\\iiiBlurPS.cso"

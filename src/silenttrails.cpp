@@ -53,8 +53,6 @@ void LoadSetFile(unsigned char* pTrails)
 void
 enableTrailSetting(void)
 {
-	using namespace MemoryVP;
-
 	if( *(DWORD*)0x667BF5 == 0xB85548EC ) // VC 1.0
 	{
 		int				pMenuEntries = *(int*)0x4966A0 + 0x3C8;

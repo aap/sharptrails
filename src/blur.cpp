@@ -1,9 +1,11 @@
 #include "sharptrails.h"
 #include "d3d9.h"
 #include "d3d9types.h"
+#include "debugmenu_public.h"
 
 HMODULE dllModule;
 int gtaversion = -1;
+DebugMenuAPI gDebugMenuAPI;
 
 static uint32_t DefinedState_A = AddressByVersion<uint32_t>(0x526330, 0x526570, 0x526500, 0x57F9C0, 0x57F9E0, 0x57F7F0);
 WRAPPER void DefinedState(void) { VARJMP(DefinedState_A); }
@@ -23,6 +25,8 @@ public:
 	static void OverlayRenderVC(RwCamera *cam, RwRaster *raster, RwRGBA color, int type);
 	static void OverlayRenderIII(RwCamera *cam, RwRaster *raster, RwRGBA color, int type, int alpha);
 	static void OverlayRenderFx(RwCamera *cam, RwRaster *raster);
+	static void MotionBlurOpen(RwCamera *cam);
+	static void MotionBlurClose(void);
 };
 
 //bool &CMBlur::ms_bJustInitialised = *(bool*)0xA10B71;
@@ -36,6 +40,10 @@ static uint32_t OverlayRenderVC_A = AddressByVersion<uint32_t>(0, 0, 0, 0x55E750
 WRAPPER void CMBlur::OverlayRenderVC(RwCamera*, RwRaster*, RwRGBA, int) { VARJMP(OverlayRenderVC_A); }
 static uint32_t OverlayRenderIII_A = AddressByVersion<uint32_t>(0x50A9C0, 0x50AAA0, 0x50AA30, 0, 0, 0);
 WRAPPER void CMBlur::OverlayRenderIII(RwCamera*, RwRaster*, RwRGBA, int, int) { VARJMP(OverlayRenderIII_A); }
+static uint32_t MotionBlurOpen_A = AddressByVersion<uint32_t>(0x50AE40, 0, 0, 0x55CE20, 0, 0);
+WRAPPER void CMBlur::MotionBlurOpen(RwCamera *cam) { VARJMP(MotionBlurOpen_A); }
+static uint32_t MotionBlurClose_A = AddressByVersion<uint32_t>(0x50B170, 0, 0, 0x55CDF0, 0, 0);
+WRAPPER void CMBlur::MotionBlurClose(void) { VARJMP(MotionBlurClose_A); }
 
 
 /*
@@ -230,7 +238,7 @@ CMBlur::OverlayRender(RwCamera *cam, RwRaster *raster, RwRGBA color, int type)
 */
 
 void
-CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, int type, int alpha)
+CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, int type, int bluralpha)
 {
 	//{
 	//	static bool keystate = false;
@@ -243,8 +251,41 @@ CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, i
 	//		keystate = false;
 	//}
 	if(!CMBlur::BlurOn || !dontblur || !RwD3D9Supported()){
-		CMBlur::OverlayRenderIII(cam, raster, color, type, alpha);
+		CMBlur::OverlayRenderIII(cam, raster, color, type, bluralpha);
 		return;
+	}
+
+	switch(type){
+	case 3:
+		color.red = 0;
+		color.green = 0xFF;
+		color.blue = 0;
+		color.alpha = 0x80;
+		break;
+	case 5:
+		color.red = 0x64;
+		color.green = 0xDC;
+		color.blue = 0xE6;
+		color.alpha = 0x9E;
+		break;
+	case 6:
+		color.red = 0x50;
+		color.green = 0xFF;
+		color.blue = 0xE6;
+		color.alpha = 0x8A;
+		break;
+	case 8:
+		color.red = 0xFF;
+		color.green = 0x3C;
+		color.blue = 0x3C;
+		color.alpha = 0xC8;
+		break;
+	case 9:
+		color.red = 0xFF;
+		color.green = 0xB4;
+		color.blue = 0xB4;
+		color.alpha = 0x80;
+		break;
 	}
 
 	RwRasterPushContext(CMBlur::pFrontBuffer);
@@ -276,15 +317,39 @@ CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, i
 	RwD3D9SetIm2DPixelShader(NULL);
 }
 
+RwCamera *&SceneCamera = *AddressByVersion<RwCamera**>(0x72676C, 0, 0, 0x8100BC, 0, 0);
+
+void
+toggleBlur(void)
+{
+	if(CMBlur::BlurOn)
+		CMBlur::MotionBlurOpen(SceneCamera);
+	else
+		CMBlur::MotionBlurClose();
+}
+
+int (*RsEventHandler_orig)(int a, int b);
+int
+delayedPatches(int a, int b)
+{
+	if(DebugMenuLoad()){
+		DebugMenuAddVarBool8("Sharptrails", "Trails", (int8_t*)&CMBlur::BlurOn, toggleBlur);
+		DebugMenuAddVarBool32("Sharptrails", "No blur", &dontblur, NULL);
+	}
+	return RsEventHandler_orig(a, b);
+}
+
 void
 patch(void)
 {
+	if(gtaversion == III_10 || gtaversion == VC_10)
+		InterceptCall(&RsEventHandler_orig, delayedPatches, AddressByVersion<uint32_t>(0x58275E, 0, 0, 0x5FFAFE, 0, 0));
 
 	if(isVC())
-		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x55D838, 0x55D858, 0x55D728), CMBlur::OverlayRenderVC_noblur);
+		InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x55D838, 0x55D858, 0x55D728), CMBlur::OverlayRenderVC_noblur);
 	else{
-		MemoryVP::InjectHook(AddressByVersion<uint32_t>(0x50ADDD, 0x50AEBD, 0x50AE4D, 0, 0, 0), CMBlur::OverlayRenderIII_noblur);
-		MemoryVP::Nop(AddressByVersion<uint32_t>(0x50AE2F, 0x50AF0F, 0x50AE9F, 0, 0, 0), 5);
+		InjectHook(AddressByVersion<uint32_t>(0x50ADDD, 0x50AEBD, 0x50AE4D, 0, 0, 0), CMBlur::OverlayRenderIII_noblur);
+		Nop(AddressByVersion<uint32_t>(0x50AE2F, 0x50AF0F, 0x50AE9F, 0, 0, 0), 5);
 	}
 }
 
@@ -297,29 +362,25 @@ DllMain(HINSTANCE hInst, DWORD reason, LPVOID)
 /*		AllocConsole();
 		freopen("CONIN$", "r", stdin);
 		freopen("CONOUT$", "w", stdout);
-		freopen("CONOUT$", "w", stderr);*/
+		freopen("CONOUT$", "w", stderr); */
 
 		AddressByVersion<uint32_t>(0, 0, 0, 0, 0, 0);			
 
 		//if(gtaversion == III_10 || gtaversion == III_11 || gtaversion == VC_10)
-		if (gtaversion != -1)
-		{
-			if (isVC())
-			{
-				MemoryVP::InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x48FEAF, 0x48FEBF, 0x48FDBF), enableTrailSetting, PATCH_CALL);
+		if (gtaversion != -1){
+			if (isVC()){
+				InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x48FEAF, 0x48FEBF, 0x48FDBF), enableTrailSetting, PATCH_CALL);
 
 				//CMBlur::AddRenderFx Type 4
-				MemoryVP::Nop(AddressByVersion<uint32_t>(0, 0, 0, 0x560FF9, 0x561019, 0x560EE9), 5);
-				MemoryVP::Nop(AddressByVersion<uint32_t>(0, 0, 0, 0x561259, 0x561279, 0x561149), 5);
+				Nop(AddressByVersion<uint32_t>(0, 0, 0, 0x560FF9, 0x561019, 0x560EE9), 5);
+				Nop(AddressByVersion<uint32_t>(0, 0, 0, 0x561259, 0x561279, 0x561149), 5);
 
-				char			dllName[MAX_PATH];
+				char dllName[MAX_PATH];
 				GetModuleFileName(hInst, dllName, MAX_PATH);
 				char* tempPointer = strrchr(dllName, '\\');
-				if (strstr(tempPointer + 1, "sharp") != NULL) {
+				if (strstr(tempPointer + 1, "sharp") != NULL)
 					patch();
-				}
-			}
-			else
+			}else
 				patch();
 		}
 	}
