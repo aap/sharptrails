@@ -7,6 +7,10 @@ HMODULE dllModule;
 int gtaversion = -1;
 DebugMenuAPI gDebugMenuAPI;
 
+int dontblur = 1;
+int coloroverlay = 0;
+
+
 static uint32_t DefinedState_A = AddressByVersion<uint32_t>(0x526330, 0x526570, 0x526500, 0x57F9C0, 0x57F9E0, 0x57F7F0);
 WRAPPER void DefinedState(void) { VARJMP(DefinedState_A); }
 
@@ -21,8 +25,9 @@ public:
 	static RwRaster *&pFrontBuffer;
 	static void MotionBlurRender(RwCamera *cam, RwUInt8 red, RwUInt8 green, RwUInt8 blue, RwUInt8 alpha, int type);
 	static void OverlayRenderVC_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, int type);
-	static void OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, int type, int alpha);
 	static void OverlayRenderVC(RwCamera *cam, RwRaster *raster, RwRGBA color, int type);
+	static void OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, int type, int alpha);
+	static void OverlayRenderIII_fakething(RwCamera *cam, RwRaster *raster, RwRGBA color, int type, int alpha);
 	static void OverlayRenderIII(RwCamera *cam, RwRaster *raster, RwRGBA color, int type, int alpha);
 	static void OverlayRenderFx(RwCamera *cam, RwRaster *raster);
 	static void MotionBlurOpen(RwCamera *cam);
@@ -79,8 +84,6 @@ setps(void)
 	}
 	RwD3D9SetIm2DPixelShader(blurps);
 }
-
-int dontblur = 1;
 
 void
 CMBlur::OverlayRenderVC_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, int type)
@@ -317,7 +320,14 @@ CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, i
 	RwD3D9SetIm2DPixelShader(NULL);
 }
 
-RwCamera *&SceneCamera = *AddressByVersion<RwCamera**>(0x72676C, 0, 0, 0x8100BC, 0, 0);
+void
+CMBlur::OverlayRenderIII_fakething(RwCamera *cam, RwRaster *raster, RwRGBA color, int type, int alpha)
+{
+	if(coloroverlay)
+		OverlayRenderIII(cam, raster, color, type, alpha);
+}
+
+RwCamera *&SceneCamera = *AddressByVersion<RwCamera**>(0x72676C, 0x72676C, 0x7368AC, 0x8100BC, 0x8100C4, 0x80F0C4);
 
 void
 toggleBlur(void)
@@ -334,6 +344,8 @@ delayedPatches(int a, int b)
 {
 	if(DebugMenuLoad()){
 		DebugMenuAddVarBool8("Sharptrails", "Trails", (int8_t*)&CMBlur::BlurOn, toggleBlur);
+		if(isIII())
+			DebugMenuAddVarBool32("Sharptrails", "Colour overlay", &coloroverlay, NULL);
 		DebugMenuAddVarBool32("Sharptrails", "No blur", &dontblur, NULL);
 	}
 	return RsEventHandler_orig(a, b);
@@ -349,7 +361,8 @@ patch(void)
 		InjectHook(AddressByVersion<uint32_t>(0, 0, 0, 0x55D838, 0x55D858, 0x55D728), CMBlur::OverlayRenderVC_noblur);
 	else{
 		InjectHook(AddressByVersion<uint32_t>(0x50ADDD, 0x50AEBD, 0x50AE4D, 0, 0, 0), CMBlur::OverlayRenderIII_noblur);
-		Nop(AddressByVersion<uint32_t>(0x50AE2F, 0x50AF0F, 0x50AE9F, 0, 0, 0), 5);
+		InjectHook(AddressByVersion<uint32_t>(0x50AE2F, 0x50AF0F, 0x50AE9F, 0, 0, 0), CMBlur::OverlayRenderIII_fakething);
+//		Nop(AddressByVersion<uint32_t>(0x50AE2F, 0x50AF0F, 0x50AE9F, 0, 0, 0), 5);
 	}
 }
 
