@@ -15,10 +15,12 @@ main(PS_INPUT In) : COLOR
 {
 	float4 dst = tex2D(tex0, In.texcoord0.xy);
 
-		//dst.a = 1.0;
-		//dst.rgb = dst.rgb*contrastMult + contrastAdd;
-		//return dst;
+// mobile contrast shader - doesn't work
+//		dst.a = 1.0;
+//		dst.rgb = dst.rgb*contrastMult + contrastAdd;
+//		return dst;
 
+	// III
 	float4 prev = dst;
 	for(int i = 0; i < 5; i++){
 		float4 tmp = dst*(1-In.color.a) + prev*In.color*In.color.a;

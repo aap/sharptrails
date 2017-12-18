@@ -28,7 +28,7 @@ project "sharptrails"
 		symbols "On"
 		debugdir "C:/Users/aap/games/gta3"
 		debugcommand "C:/Users/aap/games/gta3/gta3.exe"
-		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gta3\\dlls\\sharptrails.dll\""
+		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gta3\\plugins\\sharptrails.dll\""
 
 	filter "configurations:DebugVC"
 		defines { "DEBUG" }

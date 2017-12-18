@@ -2,10 +2,37 @@
 #include "d3d9.h"
 #include "d3d9types.h"
 #include "debugmenu_public.h"
+#include "ModuleList.hpp"
 
 HMODULE dllModule;
 int gtaversion = -1;
 DebugMenuAPI gDebugMenuAPI;
+
+struct SkyGFXConfig {
+	int version;
+
+	// 2.7
+	int worldPipeSwitch, worldPipeKey;
+	int carPipeSwitch, carPipeKey;
+
+	int neoGlossPipe, neoGlossPipeKey;
+	int blendstyle, blendkey;
+	int texgenstyle, texgenkey;
+	int rimlight, rimlightkey;
+	int neowaterdrops, neoblooddrops;
+	int envMapSize;
+
+	int disableColourOverlay;
+	int trailsSwitch;
+	int trailsBlur, trailsMotionBlur;
+
+	// for leeds world
+	float currentEmissiveRed;
+	float currentEmissiveGreen;
+	float currentEmissiveBlue;
+};
+SkyGFXConfig *skyconf;
+
 
 int dontblur = 1;
 int coloroverlay = 0;
@@ -295,15 +322,15 @@ CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, i
 	RwRasterRenderFast(cam->frameBuffer, 0, 0);
 	RwRasterPopContext();
 
-	//float mult[3], add[3];
-	//mult[0] = (color.red-64)/384.0f + 1.14f;
-	//mult[1] = (color.green-64)/384.0f + 1.14f;
-	//mult[2] = (color.blue-64)/384.0f + 1.14f;
-	//add[0] = color.red/1536.f;
-	//add[1] = color.green/1536.f;
-	//add[2] = color.blue/1536.f;
-	//RwD3D9SetPixelShaderConstant(3, &mult, 1);
-	//RwD3D9SetPixelShaderConstant(4, &add, 1);
+//	float mult[3], add[3];
+//	mult[0] = (color.red-64)/384.0f + 1.14f;
+//	mult[1] = (color.green-64)/384.0f + 1.14f;
+//	mult[2] = (color.blue-64)/384.0f + 1.14f;
+//	add[0] = 0.0f; //color.red/1536.f;
+//	add[1] = 0.0f; //color.green/1536.f;
+//	add[2] = 0.0f; //color.blue/1536.f;
+//	RwD3D9SetPixelShaderConstant(3, &mult, 1);
+//	RwD3D9SetPixelShaderConstant(4, &add, 1);
 
 	DefinedState();
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)1);
@@ -338,15 +365,40 @@ toggleBlur(void)
 		CMBlur::MotionBlurClose();
 }
 
+void (*setparam)(const char*, int);
+
+void
+blurToggled(void)
+{
+	if(setparam){
+		setparam("trailsBlur", !dontblur);
+		setparam("trailsMotionBlur", !dontblur);
+	}
+}
+
 int (*RsEventHandler_orig)(int a, int b);
 int
 delayedPatches(int a, int b)
 {
+	ModuleList modlist;
+
+	modlist.Enumerate();
+	HMODULE skygfx = modlist.Get(L"skygfx");
+	if(skygfx){
+		setparam = (void (*)(const char*, int))GetProcAddress(skygfx, "SkyGFXSetParam");
+		if(setparam){
+			setparam("trailsBlur", 0);
+			setparam("trailsMotionBlur", 0);
+		}
+	}
+
 	if(DebugMenuLoad()){
 		DebugMenuAddVarBool8("Sharptrails", "Trails", (int8_t*)&CMBlur::BlurOn, toggleBlur);
 		if(isIII())
 			DebugMenuAddVarBool32("Sharptrails", "Colour overlay", &coloroverlay, NULL);
-		DebugMenuAddVarBool32("Sharptrails", "No blur", &dontblur, NULL);
+		if(gtaversion == VC_10)
+			DebugMenuAddVar("Sharptrails", "brightness", (int*)0x869648, NULL, 1, 0, 512, NULL);
+		DebugMenuAddVarBool32("Sharptrails", "No blur", &dontblur, blurToggled);
 	}
 	return RsEventHandler_orig(a, b);
 }
@@ -390,8 +442,8 @@ DllMain(HINSTANCE hInst, DWORD reason, LPVOID)
 
 				char dllName[MAX_PATH];
 				GetModuleFileName(hInst, dllName, MAX_PATH);
-				char* tempPointer = strrchr(dllName, '\\');
-				if (strstr(tempPointer + 1, "sharp") != NULL)
+				char *s = strrchr(dllName, '\\');
+				if(strstr(s + 1, "sharp") != NULL)
 					patch();
 			}else
 				patch();
