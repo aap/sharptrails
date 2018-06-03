@@ -15,12 +15,7 @@ main(PS_INPUT In) : COLOR
 {
 	float4 dst = tex2D(tex0, In.texcoord0.xy);
 
-	// III
-	float4 prev = dst;
-	for(int i = 0; i < 5; i++){
-		float4 tmp = dst*(1-In.color.a) + prev*In.color*In.color.a;
-		prev = tmp;
-	}
-
-	return prev;
+	dst.rgb = dst.rgb*contrastMult + contrastAdd;
+	dst.a = 1.0;
+	return dst;
 }

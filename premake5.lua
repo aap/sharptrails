@@ -35,7 +35,7 @@ project "sharptrails"
 		symbols "On"
 		debugdir "C:/Users/aap/games/gtavc"
 		debugcommand "C:/Users/aap/games/gtavc/gta_vc.exe"
-		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gtavc\\dlls\\sharptrails.dll\""
+		postbuildcommands "copy /y \"$(TargetPath)\" \"C:\\Users\\aap\\games\\gtavc\\plugins\\sharptrails.dll\""
 
 	filter "configurations:Release"
 		defines { "NDEBUG" }

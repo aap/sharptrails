@@ -3,3 +3,4 @@
 
 IDR_VCBLURPS RCDATA "..\\res\\vcBlurPS.cso"
 IDR_IIIBLURPS RCDATA "..\\res\\iiiBlurPS.cso"
+IDR_CONTRASTPS RCDATA "..\\res\\contrastPS.cso"
