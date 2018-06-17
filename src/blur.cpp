@@ -36,7 +36,6 @@ SkyGFXConfig *skyconf;
 
 int dontblur = 1;
 int coloroverlay = 0;
-int mobilefilter = 0;
 
 
 static uint32_t DefinedState_A = AddressByVersion<uint32_t>(0x526330, 0x526570, 0x526500, 0x57F9C0, 0x57F9E0, 0x57F7F0);
@@ -104,25 +103,14 @@ RwImVertexIndex *blurIndices = AddressByVersion<RwImVertexIndex*>(0x5FDD90, 0x5F
 void
 setps(void)
 {
-	if(mobilefilter){
-		if(mobileps == NULL){
-			HRSRC resource = FindResource(dllModule, MAKEINTRESOURCE(IDR_CONTRASTPS), RT_RCDATA);
-			RwUInt32 *shader = (RwUInt32*)LoadResource(dllModule, resource);
-			RwD3D9CreatePixelShader(shader, &mobileps);
-			assert(mobileps);
-			FreeResource(shader);
-		}
-		RwD3D9SetIm2DPixelShader(mobileps);
-	}else{
-		if(blurps == NULL){
-			HRSRC resource = FindResource(dllModule, MAKEINTRESOURCE(isVC() ? IDR_VCBLURPS : IDR_IIIBLURPS), RT_RCDATA);
-			RwUInt32 *shader = (RwUInt32*)LoadResource(dllModule, resource);
-			RwD3D9CreatePixelShader(shader, &blurps);
-			assert(blurps);
-			FreeResource(shader);
-		}
-		RwD3D9SetIm2DPixelShader(blurps);
+	if(blurps == NULL){
+		HRSRC resource = FindResource(dllModule, MAKEINTRESOURCE(isVC() ? IDR_VCBLURPS : IDR_IIIBLURPS), RT_RCDATA);
+		RwUInt32 *shader = (RwUInt32*)LoadResource(dllModule, resource);
+		RwD3D9CreatePixelShader(shader, &blurps);
+		assert(blurps);
+		FreeResource(shader);
 	}
+	RwD3D9SetIm2DPixelShader(blurps);
 }
 
 void
@@ -150,7 +138,7 @@ CMBlur::OverlayRenderVC_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, in
 		return;
 	}
 
-	if(type != 2 || !CMBlur::BlurOn || (!dontblur && !mobilefilter) || !RwD3D9Supported()){
+	if(type != 2 || !CMBlur::BlurOn || !dontblur || !RwD3D9Supported()){
 		CMBlur::OverlayRenderVC(cam, raster, color, type);
 		return;
 	}
@@ -158,17 +146,6 @@ CMBlur::OverlayRenderVC_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, in
 	RwRasterPushContext(CMBlur::pFrontBuffer);
 	RwRasterRenderFast(cam->frameBuffer, 0, 0);
 	RwRasterPopContext();
-
-	float mult[3], add[3];
-	mult[0] = (color.red-64)/256.0f + 1.14f;
-	mult[1] = (color.green-64)/256.0f + 1.14f;
-	mult[2] = (color.blue-64)/256.0f + 1.14f;
-	add[0] = color.red/1536.f + 0.05f;
-	add[1] = color.green/1536.f + 0.05f;
-	add[2] = color.blue/1536.f + 0.05f;
-	RwD3D9SetPixelShaderConstant(3, &mult, 1);
-	RwD3D9SetPixelShaderConstant(4, &add, 1);
-
 
 	DefinedState();
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)1);
@@ -305,7 +282,7 @@ CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, i
 	//		keystate = false;
 	//}
 
-	if(!CMBlur::BlurOn || (!dontblur && !mobilefilter) || !RwD3D9Supported()){
+	if(!CMBlur::BlurOn || !dontblur || !RwD3D9Supported()){
 		CMBlur::OverlayRenderIII(cam, raster, color, type, bluralpha);
 		return;
 	}
@@ -346,18 +323,6 @@ CMBlur::OverlayRenderIII_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, i
 	RwRasterPushContext(CMBlur::pFrontBuffer);
 	RwRasterRenderFast(cam->frameBuffer, 0, 0);
 	RwRasterPopContext();
-
-	// This should be what the mobile filter does
-	float mult[3], add[3];
-	mult[0] = (color.red-64)/384.0f + 1.14f;
-	mult[1] = (color.green-64)/384.0f + 1.14f;
-	mult[2] = (color.blue-64)/384.0f + 1.14f;
-	add[0] = color.red/1536.f;
-	add[1] = color.green/1536.f;
-	add[2] = color.blue/1536.f;
-	RwD3D9SetPixelShaderConstant(3, &mult, 1);
-	RwD3D9SetPixelShaderConstant(4, &add, 1);
-
 
 	DefinedState();
 	RwRenderStateSet(rwRENDERSTATETEXTUREFILTER, (void*)1);
@@ -426,7 +391,6 @@ delayedPatches(int a, int b)
 		if(gtaversion == VC_10)
 			DebugMenuAddVar("Sharptrails", "brightness", (int*)0x869648, NULL, 1, 0, 512, NULL);
 		DebugMenuAddVarBool32("Sharptrails", "No blur", &dontblur, blurToggled);
-		DebugMenuAddVarBool32("Sharptrails", "Mobile filter", &mobilefilter, NULL);
 	}
 	return RsEventHandler_orig(a, b);
 }
