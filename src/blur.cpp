@@ -113,6 +113,41 @@ setps(void)
 	RwD3D9SetIm2DPixelShader(blurps);
 }
 
+enum { NUMAVERAGE = 10 };
+int PrevRed[NUMAVERAGE], AvgRed;
+int PrevGreen[NUMAVERAGE], AvgGreen;
+int PrevBlue[NUMAVERAGE], AvgBlue;
+int PrevAlpha[NUMAVERAGE], AvgAlpha;
+int Next;
+int NumValues;
+
+RwRGBA
+SmoothColor(RwRGBA color)
+{
+	PrevRed[Next] = color.red;
+	PrevGreen[Next] = color.green;
+	PrevBlue[Next] = color.blue;
+	PrevAlpha[Next] = color.alpha;
+	Next = (Next+1) % NUMAVERAGE;
+	NumValues = min(NumValues+1, NUMAVERAGE);
+
+	AvgRed = 0;
+	AvgGreen = 0;
+	AvgBlue = 0;
+	AvgAlpha = 0;
+	for(int i = 0; i < NumValues; i++){
+		AvgRed += PrevRed[i];
+		AvgGreen += PrevGreen[i];
+		AvgBlue += PrevBlue[i];
+		AvgAlpha += PrevAlpha[i];
+	}
+	color.red = AvgRed / NumValues;
+	color.green = AvgGreen / NumValues;
+	color.blue = AvgBlue / NumValues;
+	color.alpha = AvgAlpha / NumValues;
+	return color;
+}
+
 void
 CMBlur::OverlayRenderVC_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, int type)
 {
@@ -140,8 +175,12 @@ CMBlur::OverlayRenderVC_noblur(RwCamera *cam, RwRaster *raster, RwRGBA color, in
 
 	if(type != 2 || !CMBlur::BlurOn || !dontblur || !RwD3D9Supported()){
 		CMBlur::OverlayRenderVC(cam, raster, color, type);
+		NumValues = 0;
 		return;
 	}
+
+	// this mostly gets rid of the annoying flicker
+	color = SmoothColor(color);
 
 	RwRasterPushContext(CMBlur::pFrontBuffer);
 	RwRasterRenderFast(cam->frameBuffer, 0, 0);
@@ -416,10 +455,10 @@ DllMain(HINSTANCE hInst, DWORD reason, LPVOID)
 	if(reason == DLL_PROCESS_ATTACH){
 		dllModule = hInst;
 
-/*		AllocConsole();
+		/*AllocConsole();
 		freopen("CONIN$", "r", stdin);
 		freopen("CONOUT$", "w", stdout);
-		freopen("CONOUT$", "w", stderr); */
+		freopen("CONOUT$", "w", stderr);*/
 
 		AddressByVersion<uint32_t>(0, 0, 0, 0, 0, 0);			
 
